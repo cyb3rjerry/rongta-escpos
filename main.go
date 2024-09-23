@@ -35,6 +35,6 @@ type Printer struct {
 }
 
 // Initialize the printer
-func (p *Printer) New(rwc io.ReadWriteCloser) *Printer {
+func NewPrinter(rwc io.ReadWriteCloser) *Printer {
 	return &Printer{rwc: rwc}
 }
