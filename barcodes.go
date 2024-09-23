@@ -183,7 +183,6 @@ func (p *Printer) PrintBarCode(n uint8, m BARCODESYSTEM, d []uint8) error {
 	command = append(command, d...)
 	_, err := p.rwc.Write(command)
 
-	panic("TODO: Implement special characters")
 	return err
 }
 

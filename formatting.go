@@ -87,6 +87,7 @@ func (p *Printer) SelectUserDefinedCharacter(n uint8) error {
 	return err
 }
 
+// [Unimplemented] TODO: Implement this
 // Define user-defined characters
 func (p *Printer) DefineUserDefinedCharacters(n uint8, data []uint8) error {
 	_, err := p.rwc.Write(append([]byte{ESC, '&', n}, data...))

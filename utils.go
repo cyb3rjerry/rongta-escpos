@@ -250,6 +250,7 @@ func (p *Printer) FeedMarkedPaper() error {
 // pL = ????: Undocumented
 // pH = ????: Undocumented
 func (p *Printer) ExecuteTestPrint(n, m, pL, pH uint8) error {
+	panic("unimplemented")
 	_, err := p.rwc.Write([]byte{GS, '(', n, m, pL, pH})
 	return err
 }

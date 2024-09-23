@@ -39,6 +39,7 @@ func (p *Printer) PrintNVBitImage(n, m uint8) error {
 	return err
 }
 
+// [UNIMPLEMENTED] Doc is insanely unclear.
 // Define NV bit image
 // n: specifies the number of the defined NV bit image
 // xL, xH (xL + yH x 256) x 8 dots: specify the horizontal size of the bit image
@@ -77,6 +78,7 @@ func (p *Printer) DefineDownloadedBitImage(x, y uint8, d []uint8) error {
 	return err
 }
 
+// [UNIMPLEMENTED] Doc is insanely unclear.
 // Prints a downloaded bit image using the mode specified by
 // m. m selects a mode from the table below:
 // m = 0: Normal mode (vDensity = 203.2dpi, hDensity = 203.2dpi),
@@ -84,10 +86,10 @@ func (p *Printer) DefineDownloadedBitImage(x, y uint8, d []uint8) error {
 // m = 2: Double height mode (vDensity = 101.6dpi, hDensity = 203.2dpi),
 // m = 3: Quadruple mode (vDensity = 101.6dpi, hDensity = 101.6dpi)
 func (p *Printer) PrintDownloadedBitImage(m uint8) error {
-	panic("unimplemented")
 	if m > 3 {
 		return ErrInvalidBitImageModevalue
 	}
+	panic("unimplemented")
 
 	_, err := p.rwc.Write([]byte{GS, SLASH, m})
 	return err
