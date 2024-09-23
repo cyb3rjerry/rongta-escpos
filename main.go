@@ -33,3 +33,8 @@ const (
 type Printer struct {
 	rwc io.ReadWriteCloser
 }
+
+// Initialize the printer
+func (p *Printer) New(rwc io.ReadWriteCloser) *Printer {
+	return &Printer{rwc: rwc}
+}
