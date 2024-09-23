@@ -35,6 +35,12 @@ var (
 	ErrInvalidPrintDirection = errors.New("invalid print direction")
 )
 
+// Write string to printer buffer
+func (p *Printer) WriteStringToBuffer(s string) error {
+	_, err := p.rwc.Write([]byte(s))
+	return err
+}
+
 // Set the right-side character spacing to n X 0.125mm
 func (p *Printer) SetRightSideChar(n uint8) error {
 	_, err := p.rwc.Write([]byte{ESC, SP, n})
