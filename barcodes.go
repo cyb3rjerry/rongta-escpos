@@ -47,6 +47,7 @@ func (p *Printer) SelectHRICharacterPrintPosition(n uint8) error {
 	return err
 }
 
+// [Incomplete] Currently doesn't handle special characters
 // Print bar code mode 0
 // m = bar code system
 // n = the number of bar code data bytes
