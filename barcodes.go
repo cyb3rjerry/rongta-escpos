@@ -22,6 +22,7 @@ var (
 	ErrInvalidBarCodeLength    = errors.New("invalid bar code length")
 	ErrInvalidBarCodeChar      = errors.New("invalid bar code data")
 	ErrBarcodeLengthMismatch   = errors.New("barcode length mismatch")
+	ErrInvalidBarCodeWidth     = errors.New("invalid bar code width")
 )
 
 // Select font for Human Readable Interpretation (HRI) characters
@@ -183,5 +184,70 @@ func (p *Printer) PrintBarCode(n uint8, m BARCODESYSTEM, d []uint8) error {
 	_, err := p.rwc.Write(command)
 
 	panic("TODO: Implement special characters")
+	return err
+}
+
+// Sets the horizontal size of the bar code. n
+// specifies the bar code width as follows:
+// n | Module width (mm) for Multi-level bar code | thin element width | thick element width (for binary level bar code)
+//
+// 2 | 0.250 | 0.250 | 0.625
+// 3 | 0.375 | 0.375 | 1.000
+// 4 | 0.560 | 0.500 | 1.250
+// 5 | 0.625 | 0.625 | 1.625
+// 6 | 0.750 | 0.750 | 2.000
+//
+// Multi-level bar codes: UPC-A, UPC-E, EAN13, EAN8, CODE93, CODE128
+// Binary level bar codes: CODE39, ITF, CODABAR
+// The default value is 3.
+func (p *Printer) SetBarcodeWidth(n uint8) error {
+	if n < 2 || n > 6 {
+		return ErrInvalidBarCodeWidth
+	}
+	_, err := p.rwc.Write([]byte{GS, 'w', n})
+	return err
+}
+
+// Sets the printing position of the bar code.
+// The print bar code starting position is: 0->255
+func (p *Printer) SetBarCodePrintPosition(n uint8) error {
+	_, err := p.rwc.Write([]byte{GS, 'x', n})
+	return err
+}
+
+// Print 2D barcode
+// IMPORTANT: This command relies on the previously set 2D barcode mode via
+// `GS, Z, m` command
+//
+// PDF417 (mode 0)
+// m: specifies the column number (1 <= m <= 30), when m = 0, the column number is automatically set
+// n: specifies security level to restore when barcode image is damaged
+// k: specifies the horizontal and vertical ratio (2 <= k <= 5)
+// dL: Lower number
+// dH: Higher number
+// d1..dn: the data to be printed
+//
+// QR Code (mode 1)
+// m: specifies version (1 <= m <= 40, 0 = autosize)
+// n: specifies error correction level (n = 'L' | 'M' | 'Q' | 'H')
+// k: specifies module size (1 <= k <= 8)
+// dL: Lower number
+// dH: Higher number
+// d1..dn: the data to be printed
+func (p *Printer) PrintQRBarcode(m, n, k, dL, dH uint8, d []uint8) error {
+	_, err := p.rwc.Write(append([]byte{ESC, 'Z', m, n, k, dL, dH}, d...))
+
+	return err
+}
+
+// Select 2D barcode mode
+// m = 0: PDF417
+// m = 1: QR code
+// Default: 0
+func (p *Printer) Select2DBarcodeMode(m uint8) error {
+	if m != 0 && m != 1 {
+		return ErrInvalidBarCodeMode
+	}
+	_, err := p.rwc.Write([]byte{GS, 'Z', m})
 	return err
 }

@@ -26,6 +26,8 @@ const (
 	ESC = 0x1B // Escape
 	GS  = 0x1D // Group separator
 	NUL = 0x00 // Null
+	DC2 = 0x12 // Device control 2
+	FF  = 0x0C // Form feed
 )
 
 type Printer struct {

@@ -20,9 +20,10 @@ const (
 )
 
 var (
-	ErrInvalidNumberOfBeeps = errors.New("invalid number of beeps")
-	ErrInvalidBeepTime      = errors.New("invalid beep time")
-	ErrInvalidTypePrinterID = errors.New("invalid type of printer ID requested")
+	ErrInvalidNumberOfBeeps    = errors.New("invalid number of beeps")
+	ErrInvalidBeepTime         = errors.New("invalid beep time")
+	ErrInvalidTypePrinterID    = errors.New("invalid type of printer ID requested")
+	ErrInvalidCounterPrintMode = errors.New("invalid counter print mode")
 )
 
 // Recovers from a recoverable error and restarts printing from the line where the
@@ -200,4 +201,93 @@ func (p *Printer) TransmitStatus() (PaperStatus, error) {
 	_, err = p.rwc.Read(buf)
 
 	return PaperStatus(buf[0] & 0x0C), err
+}
+
+// Set horizontal and vertical motion units
+// This command sets the horizontal and vertical motion unit to 1 / x
+// and 1 / y inches, respectively. The default value are x = 200 and y
+// = 400. When x and y are set to 0, the default setting of each value
+// is used.
+func (p *Printer) SetMotionUnits(x, y uint8) error {
+	_, err := p.rwc.Write([]byte{GS, 'P', x, y})
+	return err
+}
+
+// Print test page
+func (p *Printer) PrintTestPage() error {
+	_, err := p.rwc.Write([]byte{DC2, 'T'})
+	return err
+}
+
+// Set peripheral device
+// bit 0: 0 = Printer disable, 1 = Printer enable
+// bit 1-7: Undefined
+func (p *Printer) SetPeripheralDevice(n uint8) error {
+	_, err := p.rwc.Write([]byte{ESC, '=', n})
+	return err
+}
+
+// Feed marked paper to print starting position
+// This command is enabled only when the BM sensor is set to
+// be effective.
+// This command sets the next print position to the beginning of the line.
+// Even if this command is executed at the print starting position of
+// the marked paper, the printer does not feed the marked paper to
+// the next print starting position.
+func (p *Printer) FeedMarkedPaper() error {
+	_, err := p.rwc.Write([]byte{GS, FF})
+	return err
+}
+
+// [UNIMPLEMENTED] Doc is insanely unclear.
+// Execute specific test print
+// n = 0: Basic sheet (paper roll)
+// n = 1: "Paper roll" ??? TODO: Doc makes no sense
+// n = 2: "Paper roll" ??? TODO: Doc makes no sense again
+// m = 1: Hexadecimal dump
+// m = 2: Print status print
+// m = 3: Rolling pattern print
+// pL = ????: Undocumented
+// pH = ????: Undocumented
+func (p *Printer) ExecuteTestPrint(n, m, pL, pH uint8) error {
+	_, err := p.rwc.Write([]byte{GS, '(', n, m, pL, pH})
+	return err
+}
+
+// Select counter print mode (serial number counter)
+// n = 0: Adds spaces to the left
+// n = 1: Adds zeros to the left
+// n = 2: Adds spaces to the right
+func (p *Printer) SelectCounterPrintMode(n uint8) error {
+	if n > 2 {
+		return ErrInvalidCounterPrintMode
+	}
+
+	_, err := p.rwc.Write([]byte{GS, 'C', '0', n})
+	return err
+}
+
+// Selects a count mode for the serial number counter
+// al, aH or bL, bH: Specifies the counter range
+// n: Specifies the stepping amount when counting up or down
+// r: Specifies the repetition number when the counter value is fixed
+func (p *Printer) SelectCountMode(al, aH, bL, bH, n, r uint8) error {
+	_, err := p.rwc.Write([]byte{GS, 'C', '1', al, aH, bL, bH, n, r})
+	return err
+}
+
+// Sets the serial number counter value
+// nL, nH: Sets the value of the serial number counter
+// set by (nL + nH x 256)
+func (p *Printer) SetCounterValue(nL, nH uint8) error {
+	_, err := p.rwc.Write([]byte{GS, 'C', '2', nL, nH})
+	return err
+}
+
+// Print counter
+// Sets the serial counter value in the print buffer and increments
+// or decrements the counter value
+func (p *Printer) PrintCounter() error {
+	_, err := p.rwc.Write([]byte{GS, 'c', '3'})
+	return err
 }

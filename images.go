@@ -107,3 +107,25 @@ func (p *Printer) PrintNVBitImageMode(n, m uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'p', n, m})
 	return err
 }
+
+// Print raster bit image
+// m: bit image mode
+// d: bit image data
+// xL, xH: select the number of data bytes (xL + xH x 256) in the horizontal direction
+// yL, yH: select the number of data bytes (yL + yH x 256) in the vertical direction
+// m = 0: Normal mode (vDensity = 203.2dpi, hDensity = 203.2dpi),
+// m = 1: Double width mode (vDensity = 203.2dpi, hDensity = 101.6dpi),
+// m = 2: Double height mode (vDensity = 101.6dpi, hDensity = 203.2dpi),
+// m = 3: Quadruple mode (vDensity = 101.6dpi, hDensity = 101.6dpi)
+// 0 <= m <= 3, 0 <= d <= 255
+// xL <= 255, yL <= 255
+// 0 <= xH <= 255 where 1 <= (xL + xH x 256) <= 128
+// 0 <= yH <= 8 where 1 <= (yL + yH x 256) <= 4095
+func (p *Printer) PrintRasterBitImage(m, xL, xH, yL, yH uint8, d []uint8) error {
+	if m > 3 {
+		return ErrInvalidBitImageModevalue
+	}
+
+	_, err := p.rwc.Write(append([]byte{GS, 'v', '0', m, xL, xH, yL, yH}, d...))
+	return err
+}

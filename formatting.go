@@ -29,9 +29,10 @@ type PrintMode struct {
 
 var (
 	// Errors
-	ErrInvalidPulseTime  = errors.New("invalid pulse time")
-	ErrInvalidCharWidth  = errors.New("invalid character width")
-	ErrInvalidCharHeight = errors.New("invalid character height")
+	ErrInvalidPulseTime      = errors.New("invalid pulse time")
+	ErrInvalidCharWidth      = errors.New("invalid character width")
+	ErrInvalidCharHeight     = errors.New("invalid character height")
+	ErrInvalidPrintDirection = errors.New("invalid print direction")
 )
 
 // Set the right-side character spacing to n X 0.125mm
@@ -282,5 +283,75 @@ func (p *Printer) SelectCutModeAndCutPaper(n uint8) error {
 // nL, nH = (nL + nH x 256) x 0.125mm
 func (p *Printer) SetPrintingAreaWidth(nL, nH uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'W', nL, nH})
+	return err
+}
+
+// Prints the data in the print buffer collectively
+// and returns to standard mode.
+func (p *Printer) PrintBufferAndReturnToStandardMode() error {
+	_, err := p.rwc.Write([]byte{FF})
+	return err
+}
+
+// When in page mode, all data in the print buffer is printed
+// Command is only effective in page mode
+// After printing, the printer does not delete the set value of
+// ESC T and ESC W
+func (p *Printer) PrintBufferInPageMode() error {
+	_, err := p.rwc.Write([]byte{ESC, FF})
+	return err
+}
+
+// Selects page mode
+func (p *Printer) SelectPageMode() error {
+	_, err := p.rwc.Write([]byte{ESC, 'L'})
+	return err
+}
+
+// Selects standard mode
+func (p *Printer) SelectStandardMode() error {
+	_, err := p.rwc.Write([]byte{ESC, 'S'})
+	return err
+}
+
+// Select print direction in page mode
+// a: 0 <= a <= 3
+// 0: left ro tight, starting upper left corner
+// 1: bottom to top, starting lower left corner
+// 2: right to left, starting lower right corner
+// 3: top to bottom, starting upper right corner
+func (p *Printer) SelectPrintDirectionInPageMode(a uint8) error {
+	if a > 3 {
+		return ErrInvalidPrintDirection
+	}
+	_, err := p.rwc.Write([]byte{ESC, 'T', a})
+	return err
+}
+
+// Set print area in page mode
+// xL, xH: Horizontal starting position
+// yL, yH: Vertical starting position
+// dxL, dxH: Horizontal printing area
+// dyL, dyH: Vertical printing area
+// x0 = ((xL + xH x 256) x 0.125mm)
+// y0 = ((yL + yH x 256) x 0.125mm)
+// dx = ((dxL + dxH x 256) x 0.125mm)
+// dy = ((dyL + dyH x 256) x 0.125mm)
+func (p *Printer) SetPrintAreaInPageMode(xL, xH, yL, yH, dxL, dxH, dyL, dyH uint8) error {
+	// TODO: Handle error on dL, dH = 0
+	_, err := p.rwc.Write([]byte{ESC, 'W', xL, xH, yL, yH, dxL, dxH, dyL, dyH})
+	return err
+}
+
+// Set absolute vertical print position in page mode
+// nL, nH = (nL + nH x 256) x 0.125mm
+func (p *Printer) SetAbsoluteVerticalPrintPositionInPageMode(nL, nH uint8) error {
+	_, err := p.rwc.Write([]byte{GS, DOLLAR, nL, nH})
+	return err
+}
+
+// Set relative vertical print position in page mode
+func (p *Printer) SetRelativeVerticalPrintPositionInPageMode(nL, nH uint8) error {
+	_, err := p.rwc.Write([]byte{GS, BACKSLASH, nL, nH})
 	return err
 }
