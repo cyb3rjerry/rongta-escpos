@@ -166,8 +166,8 @@ func (p *Printer) SetDoubleStrikeMode(n uint8) error {
 }
 
 // Print and feed n lines
-func (p *Printer) PrintAndFeed(n uint8) error {
-	_, err := p.rwc.Write([]byte{ESC, 'J', n})
+func (p *Printer) PrintAndFeedNLines(n uint8) error {
+	_, err := p.rwc.Write([]byte{ESC, 'd', n})
 	return err
 }
 
@@ -209,8 +209,8 @@ func (p *Printer) SetJustification(j Justify) error {
 }
 
 // Print and feed n lines
-func (p *Printer) PrintAndFeedNLines(n uint8) error {
-	_, err := p.rwc.Write([]byte{ESC, 'd', n})
+func (p *Printer) PrintAndFeedNDotsLines(n uint8) error {
+	_, err := p.rwc.Write([]byte{ESC, 'J', n})
 	return err
 }
 
