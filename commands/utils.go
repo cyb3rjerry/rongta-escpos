@@ -1,6 +1,9 @@
-package rongta
+package commands
 
-import "errors"
+import (
+	"errors"
+	"io"
+)
 
 type COMMAND []byte
 type PrinterIDInfo uint8
@@ -24,7 +27,45 @@ var (
 	ErrInvalidBeepTime         = errors.New("invalid beep time")
 	ErrInvalidTypePrinterID    = errors.New("invalid type of printer ID requested")
 	ErrInvalidCounterPrintMode = errors.New("invalid counter print mode")
+	ErrInvalidPulseTime        = errors.New("invalid pulse time")
 )
+
+// ESC/POS Command Set as defined in
+// https://www.manualslib.com/manual/3423402/Rongta-Technology-Rp325.html
+
+const (
+	HT        = 0x09 // Horizontal Tab
+	LF        = 0x0A // Line Feed
+	CR        = 0x0D // Print and carriage return
+	CAN       = 0x18 // Cancel print data in page mode
+	DLE       = 0x10 // Data link escape
+	EOT       = 0x04 // End of transmission
+	ENQ       = 0x05 // Enquiry
+	SP        = 0x20 // Space
+	BANG      = 0x21 // !
+	DOLLAR    = 0x24 // $
+	PERCENT   = 0x25 // %
+	DASH      = 0x2D // -
+	AMPERSAND = 0x26 // &
+	ASTERISK  = 0x2A // *
+	SLASH     = 0x2F // /
+	BACKSLASH = 0x5C // \
+
+	ESC = 0x1B // Escape
+	GS  = 0x1D // Group separator
+	NUL = 0x00 // Null
+	DC2 = 0x12 // Device control 2
+	FF  = 0x0C // Form feed
+)
+
+type Driver struct {
+	rwc io.ReadWriteCloser
+}
+
+// Initialize a new driver instance
+func NewDriver(rwc io.ReadWriteCloser) *Driver {
+	return &Driver{rwc: rwc}
+}
 
 // Recovers from a recoverable error and restarts printing from the line where the
 // error occurred
@@ -35,7 +76,7 @@ var (
 // serial interface model.
 // With a parallel interface model, this command can’t be
 // executed when the printer is busy.
-func (p *Printer) RecoverAndRestartPrint() error {
+func (p *Driver) RecoverAndRestartPrint() error {
 	_, err := p.rwc.Write([]byte{ESC, ENQ, 0x01})
 	return err
 }
@@ -48,7 +89,7 @@ func (p *Printer) RecoverAndRestartPrint() error {
 // serial interface model.
 // With a parallel interface model, this command can’t be
 // executed when the printer is busy.
-func (p *Printer) RecoverAndCancelPrint() error {
+func (p *Driver) RecoverAndCancelPrint() error {
 	_, err := p.rwc.Write([]byte{ESC, ENQ, 0x02})
 	return err
 }
@@ -58,7 +99,7 @@ func (p *Printer) RecoverAndCancelPrint() error {
 // m = false: Pin 2
 // m = true: Pin 5
 // t = time X 100ms
-func (p *Printer) SendPulseToPin(m bool, t uint8) error {
+func (p *Driver) SendPulseToPin(m bool, t uint8) error {
 	var pin byte
 	if m {
 		pin = 0x05
@@ -78,7 +119,7 @@ func (p *Printer) SendPulseToPin(m bool, t uint8) error {
 // Only for page mode and general 347
 // n: number of beeps (1 <= n <= 9)
 // t: time of each beep (1 <= t <= 9)
-func (p *Printer) SetBeepPrompt(n, t uint8) error {
+func (p *Driver) SetBeepPrompt(n, t uint8) error {
 	if n < 1 || n > 9 {
 		return ErrInvalidNumberOfBeeps
 	}
@@ -96,7 +137,7 @@ func (p *Printer) SetBeepPrompt(n, t uint8) error {
 // m = 1: Drawer kick out pin 5
 // on time = t1 X 2ms
 // off time = t2 X 2ms
-func (p *Printer) GeneratePulse(m bool, t1, t2 uint8) error {
+func (p *Driver) GeneratePulse(m bool, t1, t2 uint8) error {
 	var pin byte
 	if m {
 		pin = 0x05
@@ -111,13 +152,13 @@ func (p *Printer) GeneratePulse(m bool, t1, t2 uint8) error {
 // Disable/Enable pannel buttons.
 // When the LSB of n is 0, the panel buttons are enabled.
 // When the LSB of n is 1, the panel buttons are disabled.
-func (p *Printer) DisablePanelButtons(n uint8) error {
+func (p *Driver) DisablePanelButtons(n uint8) error {
 	_, err := p.rwc.Write([]byte{ESC, 'c', '5', n})
 	return err
 }
 
 // Cut paper (only partial is supported)
-func (p *Printer) Cut() error {
+func (p *Driver) Cut() error {
 	_, err := p.rwc.Write([]byte{ESC, 'i'})
 	return err
 }
@@ -127,7 +168,7 @@ func (p *Printer) Cut() error {
 // n = 2: Transmit the printer ID and the firmware version
 // n = 65: Firmware version
 // n = 66: Printer ID
-func (p *Printer) TransmitPrinterID(n PrinterIDInfo) ([]byte, error) {
+func (p *Driver) TransmitPrinterID(n PrinterIDInfo) ([]byte, error) {
 	buf := make([]byte, 1024)
 
 	switch n {
@@ -158,7 +199,7 @@ func (p *Printer) TransmitPrinterID(n PrinterIDInfo) ([]byte, error) {
 }
 
 // Toggle macro definition
-func (p *Printer) ToggleMacroDefinition() error {
+func (p *Driver) ToggleMacroDefinition() error {
 	_, err := p.rwc.Write([]byte{GS, ':'})
 	return err
 }
@@ -172,7 +213,7 @@ func (p *Printer) ToggleMacroDefinition() error {
 // pressed. After the button is pressed, the printer executes the
 // macro once. The printer repeats the operation r times.
 // The waiting time is t x 100ms.
-func (p *Printer) ExecuteMacro(r, t, m uint8) error {
+func (p *Driver) ExecuteMacro(r, t, m uint8) error {
 	_, err := p.rwc.Write([]byte{GS, '^', r, t, m})
 	return err
 }
@@ -184,13 +225,13 @@ func (p *Printer) ExecuteMacro(r, t, m uint8) error {
 // Bit 3: 0 = Paper sensor disabled, 8: Paper sensor enabled
 // Bit 4-7: Undefined
 // TODO: Define types for the bits
-func (p *Printer) ToggleASB(n uint8) error {
+func (p *Driver) ToggleASB(n uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'a', n})
 	return err
 }
 
 // Transmit status
-func (p *Printer) TransmitStatus() (PaperStatus, error) {
+func (p *Driver) TransmitStatus() (PaperStatus, error) {
 	_, err := p.rwc.Write([]byte{GS, 'r', 1})
 	if err != nil {
 		return PaperStatusLow, err
@@ -208,13 +249,13 @@ func (p *Printer) TransmitStatus() (PaperStatus, error) {
 // and 1 / y inches, respectively. The default value are x = 200 and y
 // = 400. When x and y are set to 0, the default setting of each value
 // is used.
-func (p *Printer) SetMotionUnits(x, y uint8) error {
+func (p *Driver) SetMotionUnits(x, y uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'P', x, y})
 	return err
 }
 
 // Print test page
-func (p *Printer) PrintTestPage() error {
+func (p *Driver) PrintTestPage() error {
 	_, err := p.rwc.Write([]byte{DC2, 'T'})
 	return err
 }
@@ -222,7 +263,7 @@ func (p *Printer) PrintTestPage() error {
 // Set peripheral device
 // bit 0: 0 = Printer disable, 1 = Printer enable
 // bit 1-7: Undefined
-func (p *Printer) SetPeripheralDevice(n uint8) error {
+func (p *Driver) SetPeripheralDevice(n uint8) error {
 	_, err := p.rwc.Write([]byte{ESC, '=', n})
 	return err
 }
@@ -234,7 +275,7 @@ func (p *Printer) SetPeripheralDevice(n uint8) error {
 // Even if this command is executed at the print starting position of
 // the marked paper, the printer does not feed the marked paper to
 // the next print starting position.
-func (p *Printer) FeedMarkedPaper() error {
+func (p *Driver) FeedMarkedPaper() error {
 	_, err := p.rwc.Write([]byte{GS, FF})
 	return err
 }
@@ -249,7 +290,7 @@ func (p *Printer) FeedMarkedPaper() error {
 // m = 3: Rolling pattern print
 // pL = ????: Undocumented
 // pH = ????: Undocumented
-func (p *Printer) ExecuteTestPrint(n, m, pL, pH uint8) error {
+func (p *Driver) ExecuteTestPrint(n, m, pL, pH uint8) error {
 	panic("unimplemented")
 	_, err := p.rwc.Write([]byte{GS, '(', n, m, pL, pH})
 	return err
@@ -259,7 +300,7 @@ func (p *Printer) ExecuteTestPrint(n, m, pL, pH uint8) error {
 // n = 0: Adds spaces to the left
 // n = 1: Adds zeros to the left
 // n = 2: Adds spaces to the right
-func (p *Printer) SelectCounterPrintMode(n uint8) error {
+func (p *Driver) SelectCounterPrintMode(n uint8) error {
 	if n > 2 {
 		return ErrInvalidCounterPrintMode
 	}
@@ -272,7 +313,7 @@ func (p *Printer) SelectCounterPrintMode(n uint8) error {
 // al, aH or bL, bH: Specifies the counter range
 // n: Specifies the stepping amount when counting up or down
 // r: Specifies the repetition number when the counter value is fixed
-func (p *Printer) SelectCountMode(al, aH, bL, bH, n, r uint8) error {
+func (p *Driver) SelectCountMode(al, aH, bL, bH, n, r uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'C', '1', al, aH, bL, bH, n, r})
 	return err
 }
@@ -280,7 +321,7 @@ func (p *Printer) SelectCountMode(al, aH, bL, bH, n, r uint8) error {
 // Sets the serial number counter value
 // nL, nH: Sets the value of the serial number counter
 // set by (nL + nH x 256)
-func (p *Printer) SetCounterValue(nL, nH uint8) error {
+func (p *Driver) SetCounterValue(nL, nH uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'C', '2', nL, nH})
 	return err
 }
@@ -288,7 +329,7 @@ func (p *Printer) SetCounterValue(nL, nH uint8) error {
 // Print counter
 // Sets the serial counter value in the print buffer and increments
 // or decrements the counter value
-func (p *Printer) PrintCounter() error {
+func (p *Driver) PrintCounter() error {
 	_, err := p.rwc.Write([]byte{GS, 'c', '3'})
 	return err
 }

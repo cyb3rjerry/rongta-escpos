@@ -1,4 +1,4 @@
-package rongta
+package commands
 
 import "errors"
 
@@ -83,20 +83,20 @@ var (
 // 0: USA, 1: France, 2: Germany, 3: UK, 4: Denmark I, 5: Sweden, 6: Italy, 7: Spain I,
 // 8: Japan, 9: Norway, 10: Denmark II, 11: Spain II, 12: Latin America, 13: Korea, 14: Slovenia,
 // 15: China
-func (p *Printer) SelectInternationalCharacterSet(c CharacterSet) error {
+func (p *Driver) SelectInternationalCharacterSet(c CharacterSet) error {
 	_, err := p.rwc.Write([]byte{ESC, 'R', byte(c)})
 	return err
 }
 
 // Select international character code
-func (p *Printer) SelectInternationalCharacterCode(n CharacterCode) error {
+func (p *Driver) SelectInternationalCharacterCode(n CharacterCode) error {
 	_, err := p.rwc.Write([]byte{ESC, 'R', uint8(n)})
 	return err
 }
 
 // Cancel user-defined characters
 // 32 <= n <= 126
-func (p *Printer) CancelUserDefinedCharacters(n uint8) error {
+func (p *Driver) CancelUserDefinedCharacters(n uint8) error {
 	if n < 32 || n > 126 {
 		return ErrInvalidCancelCharacterCode
 	}

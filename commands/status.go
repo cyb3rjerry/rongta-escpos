@@ -1,4 +1,4 @@
-package rongta
+package commands
 
 // Real-time status transmission commands
 // https://www.manualslib.com/manual/3423402/Rongta-Technology-Rp325.html
@@ -24,7 +24,7 @@ const (
 
 // Get the status of the printer cover
 // Returns true if the cover is pin 3 is HIGH, false if it's LOW
-func (p *Printer) GetDrawerStatus() (bool, error) {
+func (p *Driver) GetDrawerStatus() (bool, error) {
 	status, err := p.getPrinterStatus()
 	if err != nil {
 		return false, err
@@ -35,7 +35,7 @@ func (p *Printer) GetDrawerStatus() (bool, error) {
 
 // Get the status of the printer cover
 // Returns true if the cover is open, false if it's closed
-func (p *Printer) GetCoverStatus() (bool, error) {
+func (p *Driver) GetCoverStatus() (bool, error) {
 	status, err := p.getOfflineStatus()
 	if err != nil {
 		return false, err
@@ -46,7 +46,7 @@ func (p *Printer) GetCoverStatus() (bool, error) {
 
 // Get the status of the feed button
 // Returns true if the feed button is pressed, false if it's released
-func (p *Printer) GetFeedButtonStatus() (bool, error) {
+func (p *Driver) GetFeedButtonStatus() (bool, error) {
 	status, err := p.getOfflineStatus()
 	if err != nil {
 		return false, err
@@ -57,7 +57,7 @@ func (p *Printer) GetFeedButtonStatus() (bool, error) {
 
 // Get the status of the autocutter
 // Returns true if the autocutter is jammed, false if it's not
-func (p *Printer) GetAutocutterStatus() (bool, error) {
+func (p *Driver) GetAutocutterStatus() (bool, error) {
 	status, err := p.getErrorStatus()
 	if err != nil {
 		return false, err
@@ -68,7 +68,7 @@ func (p *Printer) GetAutocutterStatus() (bool, error) {
 
 // Get the status of the unrecoverable error
 // Returns true if there is an unrecoverable error, false if there isn't
-func (p *Printer) GetUnrecoverableErrorStatus() (bool, error) {
+func (p *Driver) GetUnrecoverableErrorStatus() (bool, error) {
 	status, err := p.getErrorStatus()
 	if err != nil {
 		return false, err
@@ -79,7 +79,7 @@ func (p *Printer) GetUnrecoverableErrorStatus() (bool, error) {
 
 // Get the status of the autorecoverable error
 // Returns true if there is an autorecoverable error, false if there isn't
-func (p *Printer) GetAutorecoverableErrorStatus() (bool, error) {
+func (p *Driver) GetAutorecoverableErrorStatus() (bool, error) {
 	status, err := p.getErrorStatus()
 	if err != nil {
 		return false, err
@@ -89,21 +89,21 @@ func (p *Printer) GetAutorecoverableErrorStatus() (bool, error) {
 }
 
 // Transmit printer status
-func (p *Printer) getPrinterStatus() (uint8, error) {
+func (p *Driver) getPrinterStatus() (uint8, error) {
 	return p.getTransmitStatus(0x01)
 }
 
 // Offline status
-func (p *Printer) getOfflineStatus() (uint8, error) {
+func (p *Driver) getOfflineStatus() (uint8, error) {
 	return p.getTransmitStatus(0x02)
 }
 
 // Transmit error status
-func (p *Printer) getErrorStatus() (uint8, error) {
+func (p *Driver) getErrorStatus() (uint8, error) {
 	return p.getTransmitStatus(0x03)
 }
 
-func (p *Printer) getTransmitStatus(statusType uint8) (uint8, error) {
+func (p *Driver) getTransmitStatus(statusType uint8) (uint8, error) {
 	status := make([]byte, 1)
 
 	_, err := p.rwc.Write([]byte{DLE, EOT, statusType})

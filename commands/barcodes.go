@@ -1,4 +1,4 @@
-package rongta
+package commands
 
 import "errors"
 
@@ -28,7 +28,7 @@ var (
 // Select font for Human Readable Interpretation (HRI) characters
 // n = 0: Font A
 // n = 1: Font B
-func (p *Printer) SelectFontForHRICharacters(n uint8) error {
+func (p *Driver) SelectFontForHRICharacters(n uint8) error {
 	if n != 0 && n != 1 {
 		return ErrinvalidHRICharacterFont
 	}
@@ -42,7 +42,7 @@ func (p *Printer) SelectFontForHRICharacters(n uint8) error {
 // n = 1: Above the bar code
 // n = 2: Below the bar code
 // n = 3: Both above and below the bar code
-func (p *Printer) SelectHRICharacterPrintPosition(n uint8) error {
+func (p *Driver) SelectHRICharacterPrintPosition(n uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'H', n})
 	return err
 }
@@ -52,7 +52,7 @@ func (p *Printer) SelectHRICharacterPrintPosition(n uint8) error {
 // m = bar code system
 // n = the number of bar code data bytes
 // d1...dn = bar code data
-func (p *Printer) PrintBarCode(n uint8, m BARCODESYSTEM, d []uint8) error {
+func (p *Driver) PrintBarCode(n uint8, m BARCODESYSTEM, d []uint8) error {
 
 	switch m {
 	case UPCA:
@@ -200,7 +200,7 @@ func (p *Printer) PrintBarCode(n uint8, m BARCODESYSTEM, d []uint8) error {
 // Multi-level bar codes: UPC-A, UPC-E, EAN13, EAN8, CODE93, CODE128
 // Binary level bar codes: CODE39, ITF, CODABAR
 // The default value is 3.
-func (p *Printer) SetBarcodeWidth(n uint8) error {
+func (p *Driver) SetBarcodeWidth(n uint8) error {
 	if n < 2 || n > 6 {
 		return ErrInvalidBarCodeWidth
 	}
@@ -210,7 +210,7 @@ func (p *Printer) SetBarcodeWidth(n uint8) error {
 
 // Sets the printing position of the bar code.
 // The print bar code starting position is: 0->255
-func (p *Printer) SetBarCodePrintPosition(n uint8) error {
+func (p *Driver) SetBarCodePrintPosition(n uint8) error {
 	_, err := p.rwc.Write([]byte{GS, 'x', n})
 	return err
 }
@@ -234,7 +234,7 @@ func (p *Printer) SetBarCodePrintPosition(n uint8) error {
 // dL: Lower number
 // dH: Higher number
 // d1..dn: the data to be printed
-func (p *Printer) PrintQRBarcode(m, n, k, dL, dH uint8, d []uint8) error {
+func (p *Driver) PrintQRBarcode(m, n, k, dL, dH uint8, d []uint8) error {
 	_, err := p.rwc.Write(append([]byte{ESC, 'Z', m, n, k, dL, dH}, d...))
 
 	return err
@@ -244,7 +244,7 @@ func (p *Printer) PrintQRBarcode(m, n, k, dL, dH uint8, d []uint8) error {
 // m = 0: PDF417
 // m = 1: QR code
 // Default: 0
-func (p *Printer) Select2DBarcodeMode(m uint8) error {
+func (p *Driver) Select2DBarcodeMode(m uint8) error {
 	if m != 0 && m != 1 {
 		return ErrInvalidBarCodeMode
 	}
